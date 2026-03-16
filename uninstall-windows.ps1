@@ -681,6 +681,18 @@ function Normalize-WslDistroName {
     return $clean
 }
 
+function Normalize-WslCommandText {
+    param([string]$CommandText)
+
+    if ([string]::IsNullOrWhiteSpace($CommandText)) {
+        return ""
+    }
+
+    # Git on Windows may check this script out with CRLF endings. WSL /bin/sh
+    # treats keywords like "then\r" as invalid tokens, so normalize to LF first.
+    return ($CommandText -replace "`r`n", "`n" -replace "`r", "`n").Trim()
+}
+
 function Get-WslDistros {
     $list = & wsl.exe --list --quiet 2>$null
     if ($LASTEXITCODE -ne 0 -or -not $list) {
@@ -739,7 +751,8 @@ fi
 exit 1
 '@
 
-    & wsl.exe --distribution $TargetDistro --exec sh -lc $probe *> $null
+    $normalizedProbe = Normalize-WslCommandText -CommandText $probe
+    & wsl.exe --distribution $TargetDistro --exec sh -lc $normalizedProbe 2>$null *> $null
     return $LASTEXITCODE -eq 0
 }
 
@@ -833,12 +846,14 @@ function Invoke-WslCommand {
     }
 
     if ($DryRun) {
-        Write-Info "[dry-run] wsl.exe --distribution $normalized --exec sh -lc ""$CommandText"""
+        $normalizedCommandText = Normalize-WslCommandText -CommandText $CommandText
+        Write-Info "[dry-run] wsl.exe --distribution $normalized --exec sh -lc ""$normalizedCommandText"""
         Add-ReportAction -Message $Description
         return
     }
 
-    $output = & wsl.exe --distribution $normalized --exec sh -lc $CommandText 2>&1
+    $normalizedCommandText = Normalize-WslCommandText -CommandText $CommandText
+    $output = & wsl.exe --distribution $normalized --exec sh -lc $normalizedCommandText 2>&1
     $exitCode = $LASTEXITCODE
 
     foreach ($line in @($output)) {
