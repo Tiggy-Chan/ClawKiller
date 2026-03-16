@@ -1,0 +1,22 @@
+# OS-generated files
+.DS_Store
+Thumbs.db
+Desktop.ini
+
+# Editor settings
+.idea/
+.vscode/
+*.code-workspace
+*.swp
+*.swo
+*~
+
+# Local temp files
+*.bak
+*.log
+*.orig
+*.temp
+*.tmp
+
+# Local backup output from ClawKiller test runs
+ClawKiller-Backup/
