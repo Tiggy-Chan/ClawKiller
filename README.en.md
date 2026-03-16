@@ -38,6 +38,16 @@ It is useful when you want to fully uninstall OpenClaw, troubleshoot leftovers, 
   - `OPENCLAW_CONFIG_PATH`
   - `OPENCLAW_HOME`
 
+## Difference from `openclaw uninstall`
+
+`openclaw uninstall` is better for a standard uninstall. Based on the OpenClaw CLI help output, it mainly removes the gateway service and local data while keeping the `openclaw` CLI installed.
+
+`ClawKiller` is meant for deeper cleanup and leftover troubleshooting. It can clean `service`, `state`, `workspace`, `app`, and `cli` scopes separately, and it also attempts to remove package-manager installation records.
+
+- If you want to keep the `openclaw` command and only clear the runtime environment, prefer `openclaw uninstall`, or use ClawKiller without the `cli` scope
+- If you want to remove the CLI itself, application files, package-manager records, and cross-platform leftovers, use ClawKiller
+- If you need WSL cleanup or tighter scope control across Windows/macOS/Linux, use ClawKiller
+
 ## Repository Layout
 
 ```text
@@ -91,6 +101,12 @@ Only clean state and workspace data:
 powershell -ExecutionPolicy Bypass -File .\uninstall-windows.ps1 -State -Workspace -Yes
 ```
 
+Remove services, state, and workspace data while keeping the `openclaw` CLI:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\uninstall-windows.ps1 -Service -State -Workspace -Yes
+```
+
 Only clean OpenClaw inside WSL:
 
 ```powershell
@@ -99,7 +115,7 @@ powershell -ExecutionPolicy Bypass -File .\uninstall-windows.ps1 -Mode wsl -Dist
 
 ### Linux
 
-Grant execute permissions first:
+After cloning from Git, these scripts should normally be directly executable. If your environment does not preserve the executable bit, run:
 
 ```bash
 chmod +x uninstall-linux.sh uninstall-unix-common.sh
@@ -129,9 +145,15 @@ Create a backup before removal:
 ./uninstall-linux.sh --all --backup --yes
 ```
 
+Remove services, state, and workspace data while keeping the `openclaw` CLI:
+
+```bash
+./uninstall-linux.sh --service --state --workspace --yes
+```
+
 ### macOS
 
-Grant execute permissions first:
+After cloning from Git, these scripts should normally be directly executable. If your environment does not preserve the executable bit, run:
 
 ```bash
 chmod +x uninstall-macos.sh uninstall-unix-common.sh
@@ -161,6 +183,12 @@ Create a backup before removal:
 ./uninstall-macos.sh --all --backup --yes
 ```
 
+Remove services, state, and workspace data while keeping the `openclaw` CLI:
+
+```bash
+./uninstall-macos.sh --service --state --workspace --yes
+```
+
 ## Flags
 
 ### Shared cleanup scopes
@@ -170,6 +198,8 @@ Create a backup before removal:
 - `workspace`: workspace directories
 - `app`: application files
 - `cli`: CLI binaries and related command leftovers
+
+> If you do not pass any scope flags, ClawKiller performs a full cleanup by default. That includes `app` and `cli`, so the `openclaw` command itself may be removed.
 
 ### Windows flags
 

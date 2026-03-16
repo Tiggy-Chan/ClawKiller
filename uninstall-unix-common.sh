@@ -537,7 +537,7 @@ clawkiller_cleanup_pkgutil_receipts() {
 }
 
 clawkiller_cleanup_package_manager_records() {
-  if [ "$APP" -eq 0 ] && [ "$CLI" -eq 0 ] && [ "$SERVICE" -eq 0 ]; then
+  if [ "$APP" -eq 0 ] && [ "$CLI" -eq 0 ]; then
     return 0
   fi
 

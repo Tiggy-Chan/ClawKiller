@@ -38,6 +38,16 @@
   - `OPENCLAW_CONFIG_PATH`
   - `OPENCLAW_HOME`
 
+## 与 `openclaw uninstall` 的区别
+
+`openclaw uninstall` 更适合常规卸载。根据 OpenClaw CLI 的帮助信息，它主要卸载 gateway service 和本地数据，但会保留 `openclaw` CLI 本身。
+
+`ClawKiller` 更适合彻底清理和排查残留问题。它可以按范围清理 `service`、`state`、`workspace`、`app`、`cli`，并尝试移除包管理器中的安装记录。
+
+- 想保留 `openclaw` 命令，只清理运行环境：优先用 `openclaw uninstall`，或使用 ClawKiller 的非 `cli` 范围
+- 想连 CLI、本体、包管理器记录和跨平台残留一起清掉：使用 ClawKiller
+- 想清理 WSL 或单独控制 Windows/macOS/Linux 上的范围：使用 ClawKiller
+
 ## 仓库结构
 
 ```text
@@ -91,6 +101,12 @@ powershell -ExecutionPolicy Bypass -File .\uninstall-windows.ps1 -All -Backup -Y
 powershell -ExecutionPolicy Bypass -File .\uninstall-windows.ps1 -State -Workspace -Yes
 ```
 
+仅移除服务、状态和工作区，但保留 `openclaw` CLI：
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\uninstall-windows.ps1 -Service -State -Workspace -Yes
+```
+
 仅处理 WSL 中的 OpenClaw：
 
 ```powershell
@@ -99,7 +115,7 @@ powershell -ExecutionPolicy Bypass -File .\uninstall-windows.ps1 -Mode wsl -Dist
 
 ### Linux
 
-先赋予执行权限：
+从 Git 克隆后通常可直接运行；如果你的环境没有保留脚本执行权限，再执行：
 
 ```bash
 chmod +x uninstall-linux.sh uninstall-unix-common.sh
@@ -129,9 +145,15 @@ chmod +x uninstall-linux.sh uninstall-unix-common.sh
 ./uninstall-linux.sh --all --backup --yes
 ```
 
+仅移除服务、状态和工作区，但保留 `openclaw` CLI：
+
+```bash
+./uninstall-linux.sh --service --state --workspace --yes
+```
+
 ### macOS
 
-先赋予执行权限：
+从 Git 克隆后通常可直接运行；如果你的环境没有保留脚本执行权限，再执行：
 
 ```bash
 chmod +x uninstall-macos.sh uninstall-unix-common.sh
@@ -161,6 +183,12 @@ chmod +x uninstall-macos.sh uninstall-unix-common.sh
 ./uninstall-macos.sh --all --backup --yes
 ```
 
+仅移除服务、状态和工作区，但保留 `openclaw` CLI：
+
+```bash
+./uninstall-macos.sh --service --state --workspace --yes
+```
+
 ## 参数说明
 
 ### 通用清理范围
@@ -170,6 +198,8 @@ chmod +x uninstall-macos.sh uninstall-unix-common.sh
 - `workspace`：工作区目录
 - `app`：应用本体文件
 - `cli`：CLI 可执行文件及相关命令残留
+
+> 不传范围参数时默认执行完整清理，这会包含 `app` 和 `cli`，因此可能移除 `openclaw` 命令本身。
 
 ### Windows 参数
 

@@ -617,7 +617,7 @@ function Remove-ScoopPackageRecords {
 }
 
 function Remove-WindowsPackageManagerRecords {
-    if (-not ($App -or $Cli -or $Service)) {
+    if (-not ($App -or $Cli)) {
         return
     }
 
@@ -880,7 +880,7 @@ function Handle-Wsl {
             Invoke-WslCommand -TargetDistro $normalizedTarget -CommandText 'if command -v openclaw >/dev/null 2>&1; then openclaw backup create --json; fi' -Description "run WSL backup in distro $normalizedTarget" -AllowFailure
         }
 
-        if ($App -or $Cli -or $Service) {
+        if ($App -or $Cli) {
             Invoke-WslCommand -TargetDistro $normalizedTarget -CommandText (Get-WslPackageManagerCleanupCommand) -Description "remove WSL package-manager records in distro $normalizedTarget" -AllowFailure
         }
 
