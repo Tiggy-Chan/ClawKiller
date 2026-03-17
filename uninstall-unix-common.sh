@@ -635,13 +635,12 @@ clawkiller_cleanup_service_macos() {
     clawkiller_run_quiet_cmd launchctl remove "$label" || true
   done
 
-  shopt -s nullglob
   for pattern in "${CLAWKILLER_LAUNCH_PLIST_PATTERNS[@]}"; do
-    for plist in $pattern; do
+    while IFS= read -r plist; do
+      [ -n "$plist" ] || continue
       clawkiller_remove_path "$plist"
-    done
+    done < <(compgen -G "$pattern" || true)
   done
-  shopt -u nullglob
 }
 
 clawkiller_cleanup_service() {

@@ -27,6 +27,7 @@ if (Get-Variable -Name PSNativeCommandUseErrorActionPreference -ErrorAction Sile
 $script:CommandRuntime = $PSCmdlet
 $script:YesToAll = $false
 $script:NoToAll = $false
+$script:HasExplicitStepConfirm = $PSBoundParameters.ContainsKey("Confirm")
 $script:LogPrefix = "[clawkiller/windows]"
 $script:ToolName = "ClawKiller"
 $script:Author = "Tiggy Chan"
@@ -135,8 +136,9 @@ function Write-ReportSection {
 }
 
 function Write-UninstallReport {
-    $actionTitle = if ($DryRun) { "planned actions" } else { "actions" }
-    $executionMode = if ($DryRun) { "dry-run" } else { "execute" }
+    $isPreview = $DryRun -or $WhatIfPreference
+    $actionTitle = if ($isPreview) { "planned actions" } else { "actions" }
+    $executionMode = if ($isPreview) { "dry-run" } else { "execute" }
     $scopeText = Get-RequestedScopeText
 
     Write-Info "uninstall report: mode=$Mode, execution=$executionMode, scopes=$scopeText, actions=$($script:ReportActions.Count), skipped=$($script:ReportSkips.Count), warnings=$($script:ReportWarnings.Count)"
@@ -247,20 +249,26 @@ function Invoke-Step {
         [string]$Action = "Execute"
     )
 
-    if ($DryRun) {
+    if ($DryRun -or $WhatIfPreference) {
         Write-Info "[dry-run] $Description"
         Add-ReportAction -Message $Description
         return $true
     }
 
-    if (-not $script:CommandRuntime.ShouldProcess($Target, $Action)) {
+    if ($script:HasExplicitStepConfirm -and -not $script:CommandRuntime.ShouldProcess($Target, $Action)) {
         return $false
     }
 
-    Write-Info $Description
-    & $Script
-    Add-ReportAction -Message $Description
-    return $true
+    try {
+        Write-Info $Description
+        & $Script
+        Add-ReportAction -Message $Description
+        return $true
+    }
+    catch {
+        Write-WarnLine "$Description failed: $($_.Exception.Message)"
+        return $false
+    }
 }
 
 function Remove-Target {
@@ -306,7 +314,26 @@ function Remove-ScheduledTaskIfExists {
 }
 
 function Get-NpmCommand {
-    Get-Command npm -ErrorAction SilentlyContinue
+    $npmCmd = Get-Command npm.cmd -ErrorAction SilentlyContinue
+    if ($npmCmd) {
+        return $npmCmd
+    }
+
+    # Falling back to `npm` may resolve to npm.ps1 in PowerShell, which can
+    # surface stderr warnings from Node as terminating errors under
+    # $ErrorActionPreference = Stop.
+    return (Get-Command npm -ErrorAction SilentlyContinue)
+}
+
+function Get-OpenClawCommand {
+    foreach ($commandName in @("openclaw.cmd", "openclaw.exe", "openclaw.bat", "openclaw")) {
+        $command = Get-Command $commandName -ErrorAction SilentlyContinue
+        if ($command) {
+            return $command
+        }
+    }
+
+    return $null
 }
 
 function Get-NpmGlobalPrefixes {
@@ -399,7 +426,7 @@ function Get-NativePaths {
     $userProfile = [Environment]::GetFolderPath("UserProfile")
     $appData = [Environment]::GetFolderPath("ApplicationData")
     $localAppData = [Environment]::GetFolderPath("LocalApplicationData")
-    $command = Get-Command openclaw -ErrorAction SilentlyContinue
+    $command = Get-OpenClawCommand
     $stateDir = if ($env:OPENCLAW_STATE_DIR) { $env:OPENCLAW_STATE_DIR } else { Join-Path $userProfile ".openclaw" }
     $configPath = if ($env:OPENCLAW_CONFIG_PATH) { $env:OPENCLAW_CONFIG_PATH } else { Join-Path $appData "OpenClaw\config.json" }
     $configRoot = Split-Path -Parent $configPath
