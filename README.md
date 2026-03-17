@@ -83,6 +83,12 @@ powershell -ExecutionPolicy Bypass -File .\uninstall-windows.ps1
 powershell -ExecutionPolicy Bypass -File .\uninstall-windows.ps1 -DryRun
 ```
 
+也可以使用 PowerShell 原生预演模式：
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\uninstall-windows.ps1 -WhatIf
+```
+
 完整清理并自动确认：
 
 ```powershell
@@ -216,6 +222,8 @@ chmod +x uninstall-macos.sh uninstall-unix-common.sh
 -Profiles current|all
 -Mode auto|native|wsl
 -Distro <WSL发行版名称>
+[-WhatIf]
+[-Confirm]
 ```
 
 说明：
@@ -225,6 +233,8 @@ chmod +x uninstall-macos.sh uninstall-unix-common.sh
 - `-Mode wsl`：只处理 WSL
 - `-Distro`：指定某个 WSL 发行版，例如 `Ubuntu`
 - `-Profiles current|all`：当前 standalone 脚本中，`current` 会回退为 `all`
+- `-WhatIf`：使用 PowerShell 原生预演模式，不会实际删除内容
+- `-Confirm`：默认只会有一次总确认；显式传入 `-Confirm` 时，会对具体删除步骤逐项确认
 
 ### Linux / macOS 参数
 
@@ -300,6 +310,7 @@ ClawKiller 会以 **best-effort** 的方式清理 OpenClaw 的自有文件与安
 - 这是删除型操作，建议先使用 `-DryRun` 或 `--dry-run`
 - 重要数据建议先使用 `-Backup` 或 `--backup`
 - 某些系统级安装记录、服务或目录，可能需要管理员 / root 权限
+- Windows 下使用 `-Mode auto` 时，如果本机 WSL 不可用或 `.wslconfig` 配置有问题，脚本会跳过 WSL 清理并继续原生 Windows 清理
 - 本项目主要清理 **OpenClaw 自有文件** 与 **精确匹配的安装记录**
 - 对于第三方脚本、手动改名目录、非标准安装路径，不保证 100% 覆盖
 

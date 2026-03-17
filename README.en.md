@@ -83,6 +83,12 @@ Preview actions first:
 powershell -ExecutionPolicy Bypass -File .\uninstall-windows.ps1 -DryRun
 ```
 
+You can also use PowerShell's native preview mode:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\uninstall-windows.ps1 -WhatIf
+```
+
 Run a full cleanup with auto-confirm:
 
 ```powershell
@@ -216,6 +222,8 @@ Remove services, state, and workspace data while keeping the `openclaw` CLI:
 -Profiles current|all
 -Mode auto|native|wsl
 -Distro <WSL distro name>
+[-WhatIf]
+[-Confirm]
 ```
 
 Notes:
@@ -225,6 +233,8 @@ Notes:
 - `-Mode wsl`: only handles WSL
 - `-Distro`: targets a specific WSL distro, such as `Ubuntu`
 - `-Profiles current|all`: `current` currently falls back to `all` in the standalone script
+- `-WhatIf`: uses PowerShell's native preview mode and does not remove anything
+- `-Confirm`: by default ClawKiller asks for one top-level confirmation; if you explicitly pass `-Confirm`, it will also confirm individual destructive steps
 
 ### Linux / macOS flags
 
@@ -300,6 +310,7 @@ The scripts detect the local environment and skip missing targets instead of fai
 - This is a destructive operation. Use `-DryRun` or `--dry-run` first when possible.
 - Use `-Backup` or `--backup` before removal if your data matters.
 - Some system-level cleanup steps may require administrator or root privileges.
+- On Windows with `-Mode auto`, if WSL is unavailable or `.wslconfig` is misconfigured, ClawKiller skips WSL cleanup and continues native Windows cleanup.
 - The project mainly targets **OpenClaw-owned paths** and **exact-match package records**.
 - Third-party wrappers, renamed directories, and non-standard install paths are not guaranteed to be fully covered.
 

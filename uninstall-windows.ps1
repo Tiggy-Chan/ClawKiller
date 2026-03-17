@@ -28,6 +28,7 @@ $script:CommandRuntime = $PSCmdlet
 $script:YesToAll = $false
 $script:NoToAll = $false
 $script:HasExplicitStepConfirm = $PSBoundParameters.ContainsKey("Confirm")
+$script:WslIssueReported = $false
 $script:LogPrefix = "[clawkiller/windows]"
 $script:ToolName = "ClawKiller"
 $script:Author = "Tiggy Chan"
@@ -720,13 +721,58 @@ function Normalize-WslCommandText {
     return ($CommandText -replace "`r`n", "`n" -replace "`r", "`n").Trim()
 }
 
+function Write-WslIssueWarningOnce {
+    param([string]$Message)
+
+    if (-not $script:WslIssueReported) {
+        Write-WarnLine $Message
+        $script:WslIssueReported = $true
+    }
+}
+
+function Invoke-WslProcess {
+    param(
+        [string[]]$Arguments,
+        [switch]$CaptureOutput,
+        [switch]$QuietFailure
+    )
+
+    $result = [pscustomobject]@{
+        ExitCode = 1
+        Output = @()
+        FailedToLaunch = $false
+    }
+
+    try {
+        if ($CaptureOutput) {
+            $output = & wsl.exe @Arguments 2>&1
+            $result.Output = @($output)
+        }
+        else {
+            & wsl.exe @Arguments 2>$null *> $null
+        }
+
+        $result.ExitCode = $LASTEXITCODE
+    }
+    catch {
+        $result.FailedToLaunch = $true
+        $result.Output = @($_.Exception.Message)
+
+        if (-not $QuietFailure) {
+            Write-WslIssueWarningOnce -Message "skip WSL cleanup: wsl.exe reported an error while probing WSL. Check %USERPROFILE%\.wslconfig and your WSL installation."
+        }
+    }
+
+    return $result
+}
+
 function Get-WslDistros {
-    $list = & wsl.exe --list --quiet 2>$null
-    if ($LASTEXITCODE -ne 0 -or -not $list) {
+    $result = Invoke-WslProcess -Arguments @("--list", "--quiet") -CaptureOutput -QuietFailure
+    if ($result.FailedToLaunch -or $result.ExitCode -ne 0 -or -not $result.Output) {
         return @()
     }
 
-    $distros = foreach ($entry in @($list)) {
+    $distros = foreach ($entry in @($result.Output)) {
         $normalized = Normalize-WslDistroName -Name $entry
         if ($normalized) {
             $normalized
@@ -748,8 +794,8 @@ function Test-WslDistroReachable {
         return $true
     }
 
-    & wsl.exe --distribution $normalized --exec /bin/true *> $null
-    return $LASTEXITCODE -eq 0
+    $result = Invoke-WslProcess -Arguments @("--distribution", $normalized, "--exec", "/bin/true")
+    return (-not $result.FailedToLaunch) -and $result.ExitCode -eq 0
 }
 
 function Test-WslHasOpenClawSignals {
@@ -779,8 +825,8 @@ exit 1
 '@
 
     $normalizedProbe = Normalize-WslCommandText -CommandText $probe
-    & wsl.exe --distribution $TargetDistro --exec sh -lc $normalizedProbe 2>$null *> $null
-    return $LASTEXITCODE -eq 0
+    $result = Invoke-WslProcess -Arguments @("--distribution", $TargetDistro, "--exec", "sh", "-lc", $normalizedProbe) -QuietFailure
+    return (-not $result.FailedToLaunch) -and $result.ExitCode -eq 0
 }
 
 function Get-WslPackageManagerCleanupCommand {
@@ -880,8 +926,14 @@ function Invoke-WslCommand {
     }
 
     $normalizedCommandText = Normalize-WslCommandText -CommandText $CommandText
-    $output = & wsl.exe --distribution $normalized --exec sh -lc $normalizedCommandText 2>&1
-    $exitCode = $LASTEXITCODE
+    $result = Invoke-WslProcess -Arguments @("--distribution", $normalized, "--exec", "sh", "-lc", $normalizedCommandText) -CaptureOutput -QuietFailure
+    $output = $result.Output
+    $exitCode = $result.ExitCode
+
+    if ($result.FailedToLaunch) {
+        Write-WslIssueWarningOnce -Message "skip WSL cleanup: wsl.exe reported an error while executing a WSL step. Check %USERPROFILE%\.wslconfig and your WSL installation."
+        return
+    }
 
     foreach ($line in @($output)) {
         if (-not [string]::IsNullOrWhiteSpace("$line")) {
